@@ -25,7 +25,12 @@ if uploaded_file:
     img_array = np.array(image)
     st.image(image, caption="Uploaded Blueprint", use_column_width=True)
 
-    gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+    if len(img_array.shape) == 2:
+    img_array = cv2.cvtColor(img_array, cv2.COLOR_GRAY2RGB)
+elif img_array.shape[2] == 4:
+    img_array = cv2.cvtColor(img_array, cv2.COLOR_RGBA2RGB)
+
+gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     _, thresh = cv2.threshold(blurred, 150, 255, cv2.THRESH_BINARY_INV)
 
@@ -58,21 +63,21 @@ if uploaded_file:
             img_b64 = base64.b64encode(buffered.getvalue()).decode()
             img_url = f"data:image/png;base64,{img_b64}"
 
-            response = openai.ChatCompletion.create(
-                model="gpt-4-vision-preview",
-                messages=[
-                    {"role": "system", "content": "You are an expert construction planner and architect."},
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": question},
-                            {"type": "image_url", "image_url": {"url": img_url}}
-                        ]
-                    }
-                ],
-                max_tokens=1000
-            )
+            from openai import OpenAI
+client = OpenAI()
 
-            answer = response["choices"][0]["message"]["content"]
+response = client.chat.completions.create(
+    model="gpt-4-vision-preview",
+    messages=[
+        {"role": "system", "content": "You are an expert..."},
+        {"role": "user", "content": [
+            {"type": "text", "text": question},
+            {"type": "image_url", "image_url": {"url": img_url}}
+        ]}
+    ],
+    max_tokens=500
+)
+
+            answer = response.choices[0].message.content
             st.markdown("**AI Response:**")
             st.write(answer)
